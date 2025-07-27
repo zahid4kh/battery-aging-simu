@@ -42,3 +42,9 @@ data class OperatingCondition(
     val isCharging: Boolean, // under overhead line
     val isRegenerating: Boolean // regenerative braking
 )
+
+data class SimulationResult(
+    val bus: Bus,
+    val history: List<BatteryState>,
+    val conditions: List<OperatingCondition>
+)
