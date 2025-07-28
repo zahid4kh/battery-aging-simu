@@ -8,7 +8,7 @@ class DataExporter {
 
     fun exportSimulationResults(
         results: List<SimulationResult>,
-        filename: String = "simulation_results_${getCurrentTimestamp()}.csv"
+        filename: String = "sim.csv"
     ) {
         try {
             val file = File(filename)
