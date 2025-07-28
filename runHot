@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+clear
+
+./gradlew :runHot --mainClass BatteryAgingSimu --auto

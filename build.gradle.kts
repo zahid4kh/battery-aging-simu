@@ -1,5 +1,6 @@
 
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
 import java.util.*
 
 plugins {
@@ -7,6 +8,7 @@ plugins {
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.plugin.compose)
     alias(libs.plugins.kotlin.plugin.serialization)
+    alias(libs.plugins.hotReload)
 }
 
 val appPackageVersion = "1.0.0"
@@ -28,8 +30,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.koin.core)
+    implementation(libs.bundles.slf4j)
 }
 
+composeCompiler {
+    featureFlags.add(ComposeFeatureFlag.OptimizeNonSkippingGroups)
+}
 
 compose.desktop {
     application {
