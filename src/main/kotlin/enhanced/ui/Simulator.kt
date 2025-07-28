@@ -1,5 +1,6 @@
 package enhanced.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
@@ -85,6 +86,7 @@ fun EnhancedBatterySimulator() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -93,13 +95,13 @@ fun EnhancedBatterySimulator() {
             "Enhanced Bus Fleet Battery Simulation",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         // Control Panel
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -111,21 +113,33 @@ fun EnhancedBatterySimulator() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Simulation controls
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Button(
                             onClick = {
                                 if (!isRunning) {
                                     isRunning = true
                                 }
                             },
-                            enabled = !isRunning && currentStep < simulationResults[0].conditions.size
+                            enabled = !isRunning && currentStep < simulationResults[0].conditions.size,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            ),
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Text(if (currentStep == 0) "Start Simulation" else "Resume")
                         }
 
                         Button(
                             onClick = { isRunning = false },
-                            enabled = isRunning
+                            enabled = isRunning,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            ),
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Text("Pause")
                         }
@@ -141,7 +155,12 @@ fun EnhancedBatterySimulator() {
                                         conditions = profileGen.generateDrivingProfile(bus, simulationTime)
                                     )
                                 }
-                            }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            ),
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Text("Reset")
                         }
@@ -150,7 +169,12 @@ fun EnhancedBatterySimulator() {
                             onClick = {
                                 val exporter = DataExporter()
                                 exporter.exportSimulationResults(simulationResults)
-                            }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            ),
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Text("Export Data")
                         }
@@ -158,8 +182,9 @@ fun EnhancedBatterySimulator() {
 
                     // Time display
                     Text(
-                        "Time: ${String.format("%.1f", currentStep / 60f)} / $simulationTime hours",
-                        fontWeight = FontWeight.Medium
+                        text = "Time: ${String.format("%.1f", currentStep / 60f)} / $simulationTime hours",
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -168,7 +193,11 @@ fun EnhancedBatterySimulator() {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Simulation Duration:", modifier = Modifier.width(150.dp))
+                    Text(
+                        text = "Simulation Duration:",
+                        modifier = Modifier.width(150.dp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Slider(
                         value = simulationTime,
                         onValueChange = {
@@ -178,9 +207,18 @@ fun EnhancedBatterySimulator() {
                         },
                         valueRange = 1f..168f, // Up to 1 week
                         modifier = Modifier.weight(1f),
-                        enabled = !isRunning && currentStep == 0
+                        enabled = !isRunning && currentStep == 0,
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            inactiveTrackColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                        )
                     )
-                    Text("${simulationTime.toInt()} hrs", modifier = Modifier.width(60.dp))
+                    Text(
+                        text = "${simulationTime.toInt()} hrs",
+                        modifier = Modifier.width(60.dp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
