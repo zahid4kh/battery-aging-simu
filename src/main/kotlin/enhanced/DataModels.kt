@@ -28,7 +28,8 @@ data class BatteryState(
     val totalAhThroughput: Float,
     val calendarAge: Float, // days
     val capacity: Float, // current capacity in kWh
-    val soh: Float // SOH in %
+    val soh: Float, // SOH in %
+    val avgDoD: Float = 0f
 )
 
 // at each time step
