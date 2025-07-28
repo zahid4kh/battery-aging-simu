@@ -1,15 +1,16 @@
 package enhanced.ui
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import enhanced.*
@@ -21,6 +22,16 @@ fun EnhancedBatterySimulator() {
     var simulationTime by remember { mutableStateOf(24f) } // hours
     var isRunning by remember { mutableStateOf(false) }
     var currentStep by remember { mutableStateOf(0) }
+
+    val fleetOverviewBg = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.surfaceDim
+        )
+    )
+    val lazyRowState = rememberLazyListState()
 
     val fleet = remember { createMockFleet() }
     val simulation = remember { BusFleetSimulation() }
@@ -225,10 +236,14 @@ fun EnhancedBatterySimulator() {
 
         // Fleet Overview
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F4F8))
+            modifier = Modifier
+                .fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier
+                    .background(fleetOverviewBg)
+                    .padding(16.dp)
+            ) {
                 Text(
                     "Fleet Overview",
                     style = MaterialTheme.typography.headlineSmall,
@@ -237,7 +252,8 @@ fun EnhancedBatterySimulator() {
 
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp),
+                    state = lazyRowState
                 ) {
                     items(simulationResults.size) { index ->
                         BusCard(
@@ -247,6 +263,22 @@ fun EnhancedBatterySimulator() {
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalScrollbar(
+                    adapter = rememberScrollbarAdapter(lazyRowState),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    style = ScrollbarStyle(
+                        minimalHeight = 16.dp,
+                        thickness = 12.dp,
+                        shape = MaterialTheme.shapes.medium,
+                        hoverDurationMillis = 500,
+                        unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                )
             }
         }
 
