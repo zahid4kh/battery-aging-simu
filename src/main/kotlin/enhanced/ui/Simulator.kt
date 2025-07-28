@@ -289,9 +289,8 @@ fun EnhancedBatterySimulator() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(0.4f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Box(
+                    modifier = Modifier.weight(0.5f)
                 ) {
                     RealTimeMetricsCard(
                         busResult = selectedResult,
@@ -299,9 +298,8 @@ fun EnhancedBatterySimulator() {
                     )
                 }
 
-                Column(
-                    modifier = Modifier.weight(0.6f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Box(
+                    modifier = Modifier.weight(0.5f)
                 ) {
                     AgingAnalysisCard(
                         busResult = selectedResult
