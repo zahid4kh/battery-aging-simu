@@ -238,50 +238,6 @@ fun EnhancedBatterySimulator() {
                     )
                 }
             }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                ChartCard(
-                    title = "State of Charge & Voltage",
-                    busResult = selectedResult,
-                    currentStep = currentStep,
-                    dataExtractor = { state ->
-                        listOf(
-                            state.soc * 100f to Color(0xFF3498DB),
-                            (state.voltage - 250f) / 1.5f to Color(0xFFE74C3C) // Scaled voltage
-                        )
-                    },
-                    yAxisLabel = "SoC (%) / Voltage (scaled)"
-                )
-
-                ChartCard(
-                    title = "Current & Temperature",
-                    busResult = selectedResult,
-                    currentStep = currentStep,
-                    dataExtractor = { state ->
-                        listOf(
-                            (state.current + 500f) / 10f to Color(0xFF2ECC71), // Scaled current
-                            state.temperature * 2f to Color(0xFFF39C12)
-                        )
-                    },
-                    yAxisLabel = "Current (scaled) / Temp (°C)"
-                )
-
-                ChartCard(
-                    title = "State of Health & Capacity Loss",
-                    busResult = selectedResult,
-                    currentStep = currentStep,
-                    dataExtractor = { state ->
-                        listOf(
-                            state.soh to Color(0xFF9B59B6),
-                            (300f - state.capacity) / 3f to Color(0xFFE67E22) // Scaled capacity loss
-                        )
-                    },
-                    yAxisLabel = "SOH (%) / Capacity Loss (scaled)"
-                )
-            }
         }
     }
 }
