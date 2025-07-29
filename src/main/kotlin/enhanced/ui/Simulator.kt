@@ -66,6 +66,18 @@ fun EnhancedBatterySimulator() {
         )
     }
 
+    LaunchedEffect(simulationTime) {
+        if (!isRunning && currentStep == 0) {
+            simulationResults = fleet.mapIndexed { index, bus ->
+                SimulationResult(
+                    bus = bus,
+                    history = listOf(initialStates[index]),
+                    conditions = profileGen.generateDrivingProfile(bus, simulationTime)
+                )
+            }
+        }
+    }
+
     // Simulation effect
     LaunchedEffect(isRunning, currentStep) {
         if (isRunning && currentStep < simulationResults[0].conditions.size) {
@@ -214,11 +226,12 @@ fun EnhancedBatterySimulator() {
                         onValueChange = {
                             if (!isRunning) {
                                 simulationTime = it
+                                currentStep = 0
                             }
                         },
                         valueRange = 1f..168f, // Up to 1 week
                         modifier = Modifier.weight(1f),
-                        enabled = !isRunning && currentStep == 0,
+                        enabled = !isRunning,
                         colors = SliderDefaults.colors(
                             thumbColor = MaterialTheme.colorScheme.primary,
                             activeTrackColor = MaterialTheme.colorScheme.onPrimaryContainer,
