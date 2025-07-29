@@ -49,10 +49,10 @@ class BusFleetSimulation {
 
         // Energy change
         val energyChange = power * dt // kWh
-        val socChange = energyChange / bus.batteryCapacity
+        val energySocChange = energyChange / bus.batteryCapacity
 
         // New SoC with charging logic
-        var newSoC = state.soc - socChange
+        var newSoC = state.soc - energySocChange
 
         // Overhead line charging
         if (condition.isCharging && newSoC < 0.9f) {
@@ -70,26 +70,67 @@ class BusFleetSimulation {
         newSoC = newSoC.coerceIn(0.02f, 1f) // allowing 2% discharge floor for SOC
 
         // Temperature model (simplified)
+        val targetTemp = 25f
         val heatGenerated = abs(limitedCurrent).pow(2) * 0.0001f * dt
-        val cooling = (state.temperature - condition.ambientTemp) * 0.1f * dt
+        val cooling = (state.temperature - targetTemp) * 0.3f * dt // stronger cooling
         val newTemp = (state.temperature + heatGenerated - cooling).coerceIn(-20f, 80f)
 
-        // Cycle counting
-        val socDelta = abs(socChange) * 100f // percentage change
+        //for frequent charging scenarios
+        var newAvgDoD = state.avgDoD
+        var newCycleStartSoC = state.cycleStartSoC
+        var newIsInDischarge = state.isInDischarge
+        var newCompletedCycles = state.completedCycles
+
+        val socDifference = newSoC - state.soc
+
+        // Micro-cycle detection (for city buses)
+        if (!condition.isCharging) { // Only count when not charging
+            if (socDifference < -0.001f && !state.isInDischarge) {
+                // Start new discharge phase
+                newIsInDischarge = true
+                newCycleStartSoC = state.soc
+                println("Bus ${bus.id} Step $currentStep: STARTING micro-discharge from ${(state.soc * 100).toInt()}%")
+            }
+        } else {
+            if (state.isInDischarge) {
+                newIsInDischarge = false
+                val cycleDoD = (state.cycleStartSoC - state.soc) * 100f
+
+                if (cycleDoD > 0.5f) {
+                    newCompletedCycles++
+                    newAvgDoD = if (state.completedCycles > 0) {
+                        (state.avgDoD * state.completedCycles + cycleDoD) / (state.completedCycles + 1)
+                    } else {
+                        cycleDoD
+                    }
+                    println("Bus ${bus.id} Step $currentStep: COMPLETED micro-cycle $newCompletedCycles: ${(state.cycleStartSoC * 100).toInt()}% → ${(state.soc * 100).toInt()}% = ${cycleDoD.toInt()}% DoD, Avg=${newAvgDoD.toInt()}%")
+                }
+            }
+        }
+
+        // Calculating DoD from recent SoC range every hour
+        if (currentStep > 0 && currentStep % 360 == 0) { // Every 6 hours
+            val socRange = when (bus.routeType) {
+                RouteType.CITY_CENTER -> 8f // City bus: 8% DoD per cycle
+                RouteType.EXPRESS -> 35f // Express: 35% DoD per cycle
+                RouteType.SUBURBAN -> 18f // Suburban: 18% DoD per cycle
+                else -> 20f
+            }
+
+            newAvgDoD = (if (newAvgDoD < 5f) { // If cycle detection failed
+                println("Bus ${bus.id} Step $currentStep: Using route-based DoD estimate = ${socRange.toInt()}%")
+                socRange
+            } else {
+                newAvgDoD
+            })
+        }
+
+        // Ensure minimum DoD for aging calculations
+        newAvgDoD = maxOf(newAvgDoD, 2f) // Minimum 2% instead of 1%
+
+        val socDelta = abs(energySocChange) * 100f // percentage change
         val cycleIncrement = socDelta / 100f // one full cycle = 100% SOC change
         val newCycles = state.cycleCount + cycleIncrement
-
-        val newAvgDoD = if (socChange < 0) {
-            val dischargeDepth = abs(socChange) * 100f
-            val weightedAvg = if (state.avgDoD > 0f) {
-                state.avgDoD * 0.8f + dischargeDepth * 0.2f
-            } else {
-                dischargeDepth
-            }
-            maxOf(weightedAvg, 1f) // Ensure minimum 1% DoD for aging calculations
-        } else {
-            maxOf(state.avgDoD, 1f) // Keep minimum even during charging
-        }
 
         val newAhThroughput = state.totalAhThroughput + abs(limitedCurrent * dt)
 
@@ -121,7 +162,7 @@ class BusFleetSimulation {
         )
 
         if (currentStep % 60 == 0) {
-            println("Step $currentStep: CalLoss=$calendarLoss%, CycLoss=$cyclicLoss%, TotalLoss=$totalLoss%, SOH=${(1f - totalLoss/100f)*100f}%")
+            println("Step $currentStep: CalLoss=$calendarLoss%, CycLoss=$cyclicLoss%, TotalLoss=$totalLoss%, SOH=${(1f - totalLoss/100f)*100f}%, DoD=${newAvgDoD.toInt()}%")
         }
 
         val newCapacity = bus.batteryCapacity * (1f - totalLoss / 100f)
@@ -141,7 +182,10 @@ class BusFleetSimulation {
             calendarAge = maxOf(0f, state.calendarAge + dt / 24f),
             capacity = newCapacity.coerceIn(bus.batteryCapacity * 0.2f, bus.batteryCapacity),
             soh = newSoH,
-            avgDoD = newAvgDoD.coerceIn(1f, 100f) // Minimum 1% DoD
+            avgDoD = newAvgDoD.coerceIn(2f, 100f), // Minimum 2%
+            cycleStartSoC = newCycleStartSoC,
+            isInDischarge = newIsInDischarge,
+            completedCycles = newCompletedCycles
         )
     }
 
