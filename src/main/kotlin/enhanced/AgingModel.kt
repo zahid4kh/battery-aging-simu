@@ -6,67 +6,65 @@ import kotlin.math.sqrt
 
 class AgingModel {
 
-    // Calendar aging based on SEI growth (Eyring-Arrhenius)
+    private val k_sei_cal = 1.0f // MUCH higher calendar aging base rate
+    private val Ea_cal = 5000f // VERY low activation energy (almost no temp dependence)
+    private val k_sei_cyc = 2.0f // MUCH higher cyclic aging base rate
+    private val Ea_cyc = 3000f // VERY low activation energy
+    private val R = 8.314f // Gas constant
+    private val alpha_soc = 1.0f // High SOC stress factor
+    private val n_dod = 0.5f // Lower DOD exponent so small DODs still cause aging
+    private val min_aging_per_day = 0.1f // Minimum 0.1% aging per day
+
+    // calendar aging based on Krupp model
     fun calculateCalendarAging(
-        timeInDays: Float,
+        days: Float,
         tempK: Float,
         soc: Float
     ): Float {
-        if (timeInDays <= 0f) return 0f
+        if (days <= 0f) return 0f
 
-        // fitted from literature
-        val A_cal = 0.012f    // Pre-exponential factor
-        val Ea_cal = 24000f    // Activation energy [J/mol]
-        val R = 8.314f         // Gas constant [J/mol·K]
-        val alpha_soc = 0.8f   // SoC stress factor
-
-        // SoC stress factor (high SoC accelerates aging)
+        // SoC stress function (quadratic, worst at extremes)
         val socStress = 1f + alpha_soc * (soc - 0.5f).pow(2)
 
-        // Temperature stress (Arrhenius)
-        val tempStress = exp(-Ea_cal / (R * tempK)) // * 10000000f // scale
+        val tempFactor = exp(-Ea_cal / (R * tempK))
 
-        // Time dependence (square root for SEI growth)
-        val timeStress = sqrt(timeInDays)
+        // SEI growth (square root of time) - capacity loss percentage
+        val calendarLoss = k_sei_cal * tempFactor * socStress * sqrt(days)
 
-        val calendarLoss = A_cal * tempStress * socStress * timeStress
-        if (timeInDays > 1f) {
-            println("Calendar: time=${timeInDays}d, temp=${tempK-273}°C, soc=${soc*100}%, loss=${calendarLoss}%")
-        }
-        return calendarLoss.coerceIn(0f, 50f) // Reasonable bounds
+        // minimum aging to ensure visible degradation
+        val minAging = min_aging_per_day * days
+
+        val totalCalendarLoss = maxOf(calendarLoss, minAging)
+
+        return totalCalendarLoss.coerceIn(0f, 50f)
     }
 
-    // Cyclic aging model (power law with stress factors)
+    // cyclic aging based on stress factors
     fun calculateCyclicAging(
-        cycleCount: Float,
+        cycles: Float,
         tempK: Float,
         avgDoD: Float,
-        cRate: Float
+        avgCRate: Float
     ): Float {
-        if (cycleCount <= 0f) return 0f
+        if (cycles <= 0f) return 0f
 
-        val A_cyc = 0.008f    // Pre-exponential factor
-        val Ea_cyc = 12000f    // Activation energy [J/mol]
-        val R = 8.314f         // Gas constant [J/mol·K]
-        val beta_dod = 1.8f    // DoD exponent
-        val beta_crate = 0.3f  // C-rate exponent
+        val tempFactor = exp(-Ea_cyc / (R * tempK))
 
-        // DoD stress factor (power law)
-        val dodStress = (avgDoD / 100f).pow(beta_dod)
+        // DoD stress with lower exponent (so small DODs still matter)
+        val dodFraction = (avgDoD / 100f).coerceIn(0.01f, 1f) // Min 1% to avoid zero
+        val dodStress = dodFraction.pow(n_dod)
 
-        // C-rate stress factor
-        val crateStress = (1f + cRate).pow(beta_crate)
+        // C-rate stress
+        val cRateStress = 1f + 0.5f * avgCRate.coerceIn(0f, 5f)
 
-        // Temperature stress (Arrhenius)
-        val tempStress = exp(-Ea_cyc / (R * tempK)) // *50000f // scale
+        // Cyclic capacity loss percentage
+        val cyclicLoss = k_sei_cyc * tempFactor * dodStress * cRateStress * cycles
 
-        // Cycle count (linear in log scale)
-        val cycleStress = cycleCount / 100f // per 100 cycles
+        // minimum cyclic aging based on cycles
+        val minCyclicAging = cycles * 0.05f // 0.05% per cycle minimum
 
-        val cyclicLoss = A_cyc * tempStress * dodStress * crateStress * cycleStress
-        if (cycleCount > 1f) {
-            println("Cyclic: cycles=${cycleCount}, DoD=${avgDoD}%, C-rate=${cRate}, loss=${cyclicLoss}%")
-        }
-        return cyclicLoss.coerceIn(0f, 50f)
+        val totalCyclicLoss = maxOf(cyclicLoss, minCyclicAging)
+
+        return totalCyclicLoss.coerceIn(0f, 50f)
     }
 }
