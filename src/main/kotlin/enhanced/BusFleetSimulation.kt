@@ -67,7 +67,7 @@ class BusFleetSimulation {
             newSoC = minOf(newSoC, 0.98f)
         }
 
-        newSoC = newSoC.coerceIn(0.1f, 1f)
+        newSoC = newSoC.coerceIn(0.05f, 1f) // allowing SOC go down to 5%
 
         // Temperature model (simplified)
         val heatGenerated = abs(limitedCurrent).pow(2) * 0.0001f * dt
@@ -76,20 +76,20 @@ class BusFleetSimulation {
 
         // Cycle counting
         val socDelta = abs(socChange) * 100f // percentage change
-        val cycleIncrement = socDelta / 100f // one full cycle = 100% SOC change
+        val cycleIncrement = socDelta / 200f // 200% total change -> 1 cycle
         val newCycles = state.cycleCount + cycleIncrement
 
-        val newAvgDoD = if (socChange < 0) {
-            val dischargeDepth = abs(socChange) * 100f
-            val weightedAvg = if (state.avgDoD > 0f) {
-                state.avgDoD * 0.8f + dischargeDepth * 0.2f
+        val newAvgDoD = if (abs(socChange) > 0.001f) { // updating only for significant changes
+            val currentDoD = abs(socChange) * 100f
+            if (state.avgDoD > 0f) {
+                // Exponential moving average
+                state.avgDoD * 0.95f + currentDoD * 0.05f
             } else {
-                dischargeDepth
+                currentDoD
             }
-            maxOf(weightedAvg, 1f) // Ensure minimum 1% DoD for aging calculations
         } else {
-            maxOf(state.avgDoD, 1f) // Keep minimum even during charging
-        }
+            state.avgDoD
+        }.coerceIn(0.1f, 100f)
 
         val newAhThroughput = state.totalAhThroughput + abs(limitedCurrent * dt)
 
@@ -97,31 +97,34 @@ class BusFleetSimulation {
         val nominalCapacityAh = bus.batteryCapacity * 1000f / 3.7f // Assume 3.7V nominal
         val cRate = abs(limitedCurrent) / nominalCapacityAh
 
-        // progressive aging factor that increases over time
-        val progressiveAgingFactor = 1.0f + (currentStep / 500f) // Increasing aging over simulation
+        // trying more realistic aging calculation
+        val timeInDays = currentStep / (60f * 24f) // Convert minutes to days
 
         // Aging calculations with progressive factor
         val calendarLoss = agingModel.calculateCalendarAging(
-            state.calendarAge,
+            timeInDays,
             newTemp + 273.15f,
             newSoC
-        ) * progressiveAgingFactor
+        )
 
         val cyclicLoss = agingModel.calculateCyclicAging(
             newCycles,
             newTemp + 273.15f,
             newAvgDoD,
             cRate
-        ) * progressiveAgingFactor
-
-        // Total aging (capacity loss percentage)
-        val totalLoss = (calendarLoss + cyclicLoss).coerceIn(
-            minOf(0.1f + currentStep * 0.001f, 20f), // Minimum loss increases with time
-            80f
         )
 
+        // Total aging (capacity loss percentage)
+        // simpler with realistic bounds
+        val totalLoss = (calendarLoss + cyclicLoss).coerceIn(0f, 80f)
+
         val newCapacity = bus.batteryCapacity * (1f - totalLoss / 100f)
-        val newSoH = (newCapacity / bus.batteryCapacity * 100f).coerceIn(20f, 100f)
+        val newSoH = ((1f - totalLoss / 100f) * 100f).coerceIn(20f, 100f)
+
+        // logging every hour
+        if (currentStep % 60 == 0 && currentStep > 0) {
+            println("Step ${currentStep}: SOH=${newSoH}%, Temp=${newTemp}°C, TotalLoss=${totalLoss}%")
+        }
 
         // Minimal smoothing to avoid shaking in progress bars
         val smoothedTemp = state.temperature * 0.8f + newTemp * 0.2f
@@ -134,10 +137,10 @@ class BusFleetSimulation {
             temperature = smoothedTemp.coerceIn(-40f, 80f),
             cycleCount = maxOf(0f, newCycles),
             totalAhThroughput = maxOf(0f, newAhThroughput),
-            calendarAge = maxOf(0f, state.calendarAge + dt / 24f),
+            calendarAge = maxOf(0f, timeInDays),
             capacity = newCapacity.coerceIn(bus.batteryCapacity * 0.2f, bus.batteryCapacity),
             soh = newSoH,
-            avgDoD = newAvgDoD.coerceIn(1f, 100f) // Minimum 1% DoD
+            avgDoD = newAvgDoD
         )
     }
 
