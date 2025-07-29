@@ -16,4 +16,5 @@
 /deb-temp/
 /.venv
 /cliversion/.gradle
+/cliversion/.kotlin
 /cliversion/build
