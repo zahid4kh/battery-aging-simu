@@ -15,3 +15,5 @@
 /desktopclient
 /deb-temp/
 /.venv
+/cliversion/.gradle
+/cliversion/build
