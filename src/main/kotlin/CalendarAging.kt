@@ -5,13 +5,12 @@ import kotlin.math.exp
 import kotlin.math.pow
 
 class CalendarAging{
-    // params
     private val preExpFactor = 2.15f * 10f.pow(4)
-    private val activationEnergy = 36360f                           // J/mol
-    private val gasConstant = 8.314f                                 // J/mol
+    private val activationEnergy = 36360f
+    private val gasConstant = 8.314f
     private val temperature = celsiusToKelvin(25f)
     private val time = yearsToHours(1f)
-    private val timeExponent = 0.789f                               // from A.Krupp table 3.4
+    private val timeExponent = 0.789f // from A.Krupp table 3.4
     private val storageSOC = 0.5f
 
 
