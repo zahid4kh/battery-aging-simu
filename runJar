@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+clear
+./gradlew clean
+./gradlew shadowJar
+echo "Built fat jar!!!"
+
+sleep 0.2
+
+clear
+
+java -jar build/libs/*.jar
