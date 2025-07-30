@@ -11,3 +11,4 @@
 /cliversion/.gradle
 /cliversion/.kotlin
 /cliversion/build
+*.jar
