@@ -2,5 +2,5 @@
 
 fun main(){
     val agingModel = CalendarAging()
-    agingModel.calculateSimpleCapacityLoss()
+    agingModel.calculateCapacityLoss()
 }

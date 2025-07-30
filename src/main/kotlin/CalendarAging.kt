@@ -23,4 +23,14 @@ class CalendarAging{
         println("Capacity loss over ${hoursToDays(time)} days is $qLoss %. Not taking SOC into account")
     }
 
+    fun calculateCapacityLoss(){
+        val expTerm = exp(x = -activationEnergy / (gasConstant * temperature))
+        val time_term = time.pow(timeExponent)
+
+        val qLoss = preExpFactor * expTerm * time_term * storageSOC.pow(5)
+        val qLossPercent = qLoss * 100f
+
+        println("Capacity loss over ${hoursToDays(time)} days is $qLossPercent %")
+    }
+
 }
